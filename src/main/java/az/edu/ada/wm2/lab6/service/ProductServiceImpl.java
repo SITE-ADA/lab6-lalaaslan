@@ -12,9 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -38,7 +37,7 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponseDto createProduct(ProductRequestDto dto) {
         Product product = productMapper.toEntity(dto);
         if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
-            Set<Category> categories = new HashSet<>(categoryRepository.findAllById(dto.getCategoryIds()));
+            List<Category> categories = new ArrayList<>(categoryRepository.findAllById(dto.getCategoryIds()));
             product.setCategories(categories);
         }
         Product saved = productRepository.save(product);
@@ -67,7 +66,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productMapper.toEntity(dto);
         product.setId(id);
         if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
-            Set<Category> categories = new HashSet<>(categoryRepository.findAllById(dto.getCategoryIds()));
+            List<Category> categories = new ArrayList<>(categoryRepository.findAllById(dto.getCategoryIds()));
             product.setCategories(categories);
         }
         Product saved = productRepository.save(product);
@@ -84,16 +83,14 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponseDto> getProductsExpiringBefore(LocalDate date) {
-        return productRepository.findAll().stream()
-                .filter(p -> p.getExpirationDate() != null && p.getExpirationDate().isBefore(date))
+        return productRepository.findByExpirationDateBefore(date).stream()
                 .map(productMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<ProductResponseDto> getProductsByPriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
-        return productRepository.findAll().stream()
-                .filter(p -> p.getPrice().compareTo(minPrice) >= 0 && p.getPrice().compareTo(maxPrice) <= 0)
+        return productRepository.findByPriceBetween(minPrice, maxPrice).stream()
                 .map(productMapper::toResponseDto)
                 .collect(Collectors.toList());
     }

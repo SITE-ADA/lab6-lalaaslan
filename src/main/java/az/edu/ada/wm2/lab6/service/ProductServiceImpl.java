@@ -35,6 +35,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponseDto createProduct(ProductRequestDto dto) {
+        validatePrice(dto.getPrice());
         Product product = productMapper.toEntity(dto);
         if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
             List<Category> categories = new ArrayList<>(categoryRepository.findAllById(dto.getCategoryIds()));
@@ -60,11 +61,12 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponseDto updateProduct(UUID id, ProductRequestDto dto) {
-        if (!productRepository.existsById(id)) {
-            throw new RuntimeException("Product not found with id: " + id);
-        }
-        Product product = productMapper.toEntity(dto);
-        product.setId(id);
+        validatePrice(dto.getPrice());
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        product.setProductName(dto.getProductName());
+        product.setPrice(dto.getPrice());
+        product.setExpirationDate(dto.getExpirationDate());
         if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
             List<Category> categories = new ArrayList<>(categoryRepository.findAllById(dto.getCategoryIds()));
             product.setCategories(categories);
@@ -75,10 +77,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void deleteProduct(UUID id) {
-        if (!productRepository.existsById(id)) {
-            throw new RuntimeException("Product not found with id: " + id);
-        }
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        productRepository.delete(product);
     }
 
     @Override
@@ -93,5 +94,11 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.findByPriceBetween(minPrice, maxPrice).stream()
                 .map(productMapper::toResponseDto)
                 .collect(Collectors.toList());
+    }
+
+    private void validatePrice(BigDecimal price) {
+        if (price != null && price.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Price must be greater than zero");
+        }
     }
 }
